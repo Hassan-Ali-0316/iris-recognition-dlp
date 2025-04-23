@@ -7,6 +7,13 @@ from tensorflow.keras.optimizers import Adam
 from sklearn.model_selection import train_test_split
 from src.preprocessing import detect_eyes, normalize_image
 import cv2
+import matplotlib.pyplot as plt
+from tensorflow.keras.preprocessing.image import ImageDataGenerator
+from sklearn.metrics import confusion_matrix
+import seaborn as sns
+
+
+
 
 def load_processed_dataset(processed_dir):
     
@@ -60,9 +67,74 @@ def train_model():
         print('You need atleast 2 people to train a classification model')
         return
     
+
     X_train, X_val, y_train, y_val = train_test_split(X, y, test_size=0.2, random_state=42)
+
+    datagen = ImageDataGenerator(
+        rotation_range=10,
+        zoom_range=0.1,
+        width_shift_range=0.1,
+        height_shift_range=0.1
+    )
+    datagen.fit(X_train)
+
     model = build_model((128,128,1), len(label_map))
     model.fit(X_train, y_train, epochs=10, validation_data=(X_val,y_val), batch_size=16)
 
+    history = model.fit(
+        datagen.flow(X_train, y_train, batch_size=16),
+        epochs=10,
+        validation_data=(X_val, y_val)
+    )
+    # Plot Accuracy
+    plt.figure(figsize=(8, 5))
+    plt.plot(history.history['accuracy'], label='Train Accuracy')
+    plt.plot(history.history['val_accuracy'], label='Validation Accuracy')
+    plt.title('Model Accuracy')
+    plt.xlabel('Epoch')
+    plt.ylabel('Accuracy')
+    plt.legend()
+    plt.grid()
+    plt.savefig('accuracy_plot.png')
+    plt.close()
+
+    # Plot Loss
+    plt.figure(figsize=(8, 5))
+    plt.plot(history.history['loss'], label='Train Loss')
+    plt.plot(history.history['val_loss'], label='Validation Loss')
+    plt.title('Model Loss')
+    plt.xlabel('Epoch')
+    plt.ylabel('Loss')
+    plt.legend()
+    plt.grid()
+    plt.savefig('loss_plot.png')
+    plt.close()
+
+
+    # Evaluate the model on validation data
+    
+    y_pred = model.predict(X_val)
+    y_pred_classes = np.argmax(y_pred, axis=1)
+
+    # Generate confusion matrix
+    cm = confusion_matrix(y_val, y_pred_classes)
+
+    # Plot the confusion matrix
+    plt.figure(figsize=(8, 6))
+    sns.heatmap(cm, annot=True, fmt="d", cmap="Blues")
+    plt.title("Confusion Matrix")
+    plt.xlabel("Predicted Label")
+    plt.ylabel("True Label")
+    plt.savefig("confusion_matrix.png")
+    plt.close()
+
+
     model.save('models/iris_model.h5')
     print('Model is trained and saved!')
+
+    # Save model architecture summary
+    with open("model_summary.txt", "w") as f:
+        model.summary(print_fn=lambda x: f.write(x + "\n"))
+
+
+
