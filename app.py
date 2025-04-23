@@ -108,7 +108,7 @@ def login_from_webcam():
     predicted_label = int(np.argmax(predictions))
     confidence = float(np.max(predictions))
 
-    if confidence < 0.70:
+    if confidence < 0.60:
         result = "Unknown"
     else:
         result = label_map[str(predicted_label)]
@@ -148,7 +148,7 @@ def signup_from_webcam():
 
 root = tk.Tk()
 root.title("Iris Recognition App")
-root.geometry("400x250")
+root.geometry("500x300")
 
 title_label = tk.Label(root, text="Iris Recognition System", font=("Helvetica", 16))
 title_label.pack(pady=20)
