@@ -129,11 +129,11 @@ def train_model():
     plt.close()
 
 
-    model.save('models/iris_model.h5')
+    model.save('models/iris_model.keras')
     print('Model is trained and saved!')
 
     # Save model architecture summary
-    with open("model_summary.txt", "w") as f:
+    with open("model_summary.txt", "w", encoding="utf-8") as f:
         model.summary(print_fn=lambda x: f.write(x + "\n"))
 
 
