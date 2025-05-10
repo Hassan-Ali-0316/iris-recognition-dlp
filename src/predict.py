@@ -1,61 +1,50 @@
-import cv2
-import numpy as np
-import tensorflow as tf
-import json
 import os
-from src.preprocessing import normalize_image
+import json
+import numpy as np
+import cv2
+import tensorflow as tf
+from tensorflow.keras.models import load_model
+from tensorflow.keras.utils import register_keras_serializable
 
-model = tf.keras.models.load_model('models/iris_model.h5')
+# Define constant paths
+MODEL_PATH = "src/models/siamese_model.keras"
+EMBEDDINGS_PATH = "embeddings/embeddings.npz"
+LABEL_MAP_PATH = "embeddings/label_map.json"
 
-with open('utils/label_map.json','r') as f:
-    label_map = json.load(f)
+@register_keras_serializable()
+def euclidean_distance(vectors):
+    """Calculate Euclidean distance between two vectors"""
+    x, y = vectors
+    return tf.sqrt(tf.reduce_sum(tf.square(x - y), axis=1, keepdims=True))
 
-face_cascade = cv2.CascadeClassifier(cv2.data.haarcascades + 'haarcascade_frontalface_default.xml')
-eye_cascade = cv2.CascadeClassifier(cv2.data.haarcascades + 'haarcascade_eye.xml')
+@register_keras_serializable()
+def contrastive_loss(y_true, y_pred):
+    """Contrastive loss function for Siamese network"""
+    margin = 1.0
+    square_pred = tf.square(y_pred)
+    margin_square = tf.square(tf.maximum(margin - y_pred, 0))
+    return tf.reduce_mean(y_true * square_pred + (1 - y_true) * margin_square)
 
-def predict_identity(img_path):
-    img = cv2.imread(img_path)
+def normalize_image(image):
+    """Normalize image to 0-1 range"""
+    return image / 255.0
 
-    if img is None:
-        print(f'Could not read image: {img_path}')
-        return 'Unknown'
+def load_model_and_base_network():
+    """Load the trained model and extract base network"""
+    try:
+        model = load_model(
+            MODEL_PATH, 
+            custom_objects={
+                "contrastive_loss": contrastive_loss,
+                "euclidean_distance": euclidean_distance
+            }
+        )
+        base_network = model.get_layer("base_network")
+        return base_network
+    except Exception as e:
+        print(f"Error loading model: {e}")
+        return None
+
+def load_embeddings(path=EMBEDDINGS_PATH):
+    """Load stored embeddings from file"""
     
-    gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-
-    # Detect faces
-    faces = face_cascade.detectMultiScale(gray, 1.3, 5)
-    if len(faces) == 0:
-        print("No face detected.")
-        return "Unknown"
-    
-    # Process the first detected face
-    (x, y, w, h) = faces[0]
-    face_roi = gray[y:y+h, x:x+w]
-
-    # Detect eyes inside the face
-    eyes = eye_cascade.detectMultiScale(face_roi)
-    if len(eyes) == 0:
-        print("No eyes detected inside face.")
-        return "Unknown"
-    
-    # Take the first detected eye
-    (ex, ey, ew, eh) = eyes[0]
-    eye_img = face_roi[ey:ey+eh, ex:ex+ew]
-
-    # Resize and normalize
-    eye_img = cv2.resize(eye_img, (128, 128))
-    eye_img = normalize_image(eye_img)
-    eye_img = eye_img.reshape(1, 128, 128, 1)  # (batch_size, height, width, channels)
-
-    # Predict
-    predictions = model.predict(eye_img)
-    predicted_label = np.argmax(predictions)
-
-    confidence = np.max(predictions)
-
-    if confidence < 0.70:  # Threshold for low confidence
-        return "Unknown"
-
-    person_name = label_map[str(predicted_label)]
-    return person_name
-
