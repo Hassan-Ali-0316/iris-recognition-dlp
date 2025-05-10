@@ -258,6 +258,15 @@ def capture_eye_from_webcam():
         messagebox.showerror("Error", f"Webcam error: {e}")
         return None
 
+# === Open User Notepad ===
+def open_user_notepad(user_name):
+    file_name = f"notes_{user_name}.txt"
+    if not os.path.exists(file_name):
+        with open(file_name, "w") as f:
+            f.write(f"Secure notes for {user_name}\n")
+    os.system(f'notepad {file_name}')
+
+
 # === Login (Image Upload) ===
 def upload_and_predict():
     """Verify identity using uploaded eye image"""
@@ -294,10 +303,7 @@ def upload_and_predict():
             )
             try:
                 # Create a placeholder notes file if it doesn't exist
-                if not os.path.exists("notes.txt"):
-                    with open("notes.txt", "w") as f:
-                        f.write("Your secure notes go here.")
-                os.system("notepad notes.txt")
+                open_user_notepad(identity)
             except Exception as e:
                 messagebox.showerror("Error", f"Failed to open notes: {e}")
         else:
@@ -332,10 +338,7 @@ def login_from_webcam():
             )
             try:
                 # Create a placeholder notes file if it doesn't exist
-                if not os.path.exists("notes.txt"):
-                    with open("notes.txt", "w") as f:
-                        f.write("Your secure notes go here.")
-                os.system("notepad notes.txt")
+                open_user_notepad(identity)
             except Exception as e:
                 messagebox.showerror("Error", f"Failed to open notes: {e}")
         else:
