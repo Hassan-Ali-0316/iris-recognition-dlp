@@ -1,0 +1,14 @@
+Validation Loss: 0.1294
+Validation Accuracy (threshold=0.5): 0.9000
+Training Time: 163.18 seconds
+Best Epoch: 10
+
+Classification Report:
+              precision    recall  f1-score   support
+
+   Different       0.89      0.91      0.90        45
+        Same       0.91      0.89      0.90        45
+
+    accuracy                           0.90        90
+   macro avg       0.90      0.90      0.90        90
+weighted avg       0.90      0.90      0.90        90
